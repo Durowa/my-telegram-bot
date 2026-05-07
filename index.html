@@ -1,0 +1,640 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover, shrink-to-fit=yes">
+  <title>Fearless Miner · $Fear</title>
+  <!-- Telegram WebApp -->
+  <script src="https://telegram.org/js/telegram-web-app.js"></script>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+      background: radial-gradient(circle at 20% 10%, #1a1a1a, #0a0a0a 90%);
+      min-height: 100vh;
+      height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+      position: relative;
+      touch-action: manipulation;
+      user-select: none;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    /* floating gold sparks */
+    .sparks {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+      z-index: 0;
+    }
+    .spark {
+      position: absolute;
+      width: 4px;
+      height: 4px;
+      background: #fbbf24;
+      border-radius: 50%;
+      box-shadow: 0 0 12px #fbbf24;
+      animation: floatSpark 6s infinite ease-in-out;
+      opacity: 0.5;
+    }
+    @keyframes floatSpark {
+      0% { transform: translateY(100vh) scale(0); opacity: 0; }
+      20% { opacity: 0.8; }
+      80% { opacity: 0.3; }
+      100% { transform: translateY(-10vh) scale(1.2); opacity: 0; }
+    }
+
+    /* main container glass */
+    .game-container {
+      position: relative;
+      z-index: 10;
+      width: 100%;
+      max-width: 420px;
+      height: 100vh;
+      max-height: 850px;
+      background: rgba(20, 20, 20, 0.45);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border-radius: 40px;
+      border: 1px solid rgba(251, 191, 36, 0.3);
+      box-shadow: 0 20px 50px rgba(0,0,0,0.8), inset 0 0 30px rgba(251,191,36,0.1);
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      padding: 20px 16px 24px;
+    }
+
+    /* top bar */
+    .top-bar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background: rgba(10, 10, 10, 0.5);
+      backdrop-filter: blur(15px);
+      -webkit-backdrop-filter: blur(15px);
+      border-radius: 40px;
+      padding: 12px 20px;
+      border: 1px solid rgba(251, 191, 36, 0.4);
+      margin-bottom: 15px;
+      color: #fbbf24;
+      font-weight: bold;
+    }
+    .balance {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 20px;
+      text-shadow: 0 0 10px #fbbf24;
+      letter-spacing: 0.5px;
+    }
+    .energy-wrap {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      background: rgba(0,0,0,0.5);
+      border-radius: 30px;
+      padding: 5px 12px;
+    }
+    .energy-icon {
+      font-size: 18px;
+      filter: drop-shadow(0 0 6px #facc15);
+    }
+    .energy-bar-bg {
+      width: 70px;
+      height: 8px;
+      background: #333;
+      border-radius: 10px;
+      overflow: hidden;
+    }
+    .energy-fill {
+      width: 100%;
+      height: 100%;
+      background: linear-gradient(90deg, #fbbf24, #f59e0b);
+      border-radius: 10px;
+      box-shadow: 0 0 12px #fbbf24;
+    }
+
+    /* main miner area */
+    .miner-area {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+    }
+
+    .rock-container {
+      position: relative;
+      cursor: pointer;
+      transition: transform 0.1s ease;
+      margin-bottom: 10px;
+    }
+    .rock-container:active {
+      transform: scale(0.92);
+    }
+    .character {
+      position: absolute;
+      top: -45px;
+      left: 50%;
+      transform: translateX(-50%);
+      font-size: 50px;
+      filter: drop-shadow(0 10px 6px black);
+      z-index: 5;
+      transition: all 0.1s;
+    }
+    .rock {
+      width: 140px;
+      height: 130px;
+      background: radial-gradient(circle at 30% 20%, #4b5563, #1f2937);
+      border-radius: 45% 50% 45% 50% / 50% 45% 50% 45%;
+      box-shadow: 0 30px 30px rgba(0,0,0,0.7), inset 0 -10px 10px rgba(0,0,0,0.6), 0 0 25px #fbbf2480;
+      border: 2px solid #b45309;
+      position: relative;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .gold-vein {
+      position: absolute;
+      width: 100%;
+      height: 100%;
+      background: radial-gradient(circle at 70% 60%, #fbbf24 5%, transparent 30%);
+      opacity: 0.5;
+    }
+
+    .particle-container {
+      position: absolute;
+      pointer-events: none;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+    }
+
+    /* tabs */
+    .tabs {
+      display: flex;
+      gap: 8px;
+      margin-top: 10px;
+      justify-content: center;
+    }
+    .tab-btn {
+      background: rgba(0,0,0,0.5);
+      backdrop-filter: blur(10px);
+      border: 1px solid rgba(251,191,36,0.5);
+      color: #ccc;
+      padding: 12px 14px;
+      border-radius: 30px;
+      font-weight: bold;
+      font-size: 15px;
+      cursor: pointer;
+      transition: 0.2s;
+      flex: 1;
+      text-align: center;
+    }
+    .tab-btn.active {
+      background: #fbbf24;
+      color: black;
+      box-shadow: 0 0 20px #fbbf24;
+      border-color: white;
+    }
+
+    /* panels */
+    .panel {
+      background: rgba(20, 20, 20, 0.6);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border-radius: 30px;
+      border: 1px solid rgba(251,191,36,0.4);
+      padding: 18px;
+      margin-top: 12px;
+      max-height: 220px;
+      overflow-y: auto;
+      color: white;
+      display: none;
+    }
+    .panel.active {
+      display: block;
+    }
+
+    .case-item, .upgrade-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background: rgba(0,0,0,0.4);
+      border-radius: 16px;
+      padding: 10px 14px;
+      margin-bottom: 8px;
+      border: 1px solid rgba(255,215,0,0.2);
+    }
+    button {
+      background: #fbbf24;
+      border: none;
+      border-radius: 20px;
+      padding: 8px 18px;
+      font-weight: bold;
+      color: black;
+      cursor: pointer;
+      transition: 0.2s;
+      box-shadow: 0 0 12px #fbbf2480;
+    }
+    button:active { transform: scale(0.94); }
+
+    .admin-btn {
+      position: absolute;
+      top: 15px;
+      right: 15px;
+      z-index: 30;
+      background: black;
+      border: 1px solid gold;
+      font-size: 22px;
+      border-radius: 50%;
+      width: 44px;
+      height: 44px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      background: rgba(0,0,0,0.7);
+      backdrop-filter: blur(10px);
+    }
+    .hidden { display: none !important; }
+  </style>
+</head>
+<body>
+<div class="sparks" id="sparksContainer"></div>
+
+<div class="game-container">
+  <!-- Админ кнопка (появляется если пользователь админ) -->
+  <div id="adminTrigger" class="admin-btn hidden">⚙️</div>
+
+  <div class="top-bar">
+    <div class="balance">🪙 <span id="balanceDisplay">0</span></div>
+    <div class="energy-wrap">
+      <span class="energy-icon">⚡</span>
+      <div class="energy-bar-bg"><div id="energyFill" class="energy-fill" style="width: 100%;"></div></div>
+      <span id="energyText">1000</span>
+    </div>
+  </div>
+
+  <div class="miner-area">
+    <div class="rock-container" id="rockClickArea">
+      <div class="character" id="activeSkinDisplay">🦡</div>
+      <div class="rock">
+        <div class="gold-vein"></div>
+        <span style="color:white; font-weight:bold; text-shadow:0 0 10px black; z-index:2;">⛏️</span>
+      </div>
+    </div>
+    <div class="particle-container" id="particleContainer"></div>
+  </div>
+
+  <div class="tabs">
+    <div class="tab-btn active" data-tab="cases">📦 Кейсы</div>
+    <div class="tab-btn" data-tab="friends">👥 Друзья</div>
+    <div class="tab-btn" data-tab="upgrades">⚙️ Апгрейды</div>
+  </div>
+
+  <!-- Панели -->
+  <div id="panelCases" class="panel active">
+    <div class="case-item">
+      <span>🔮 Шахтерский кейс</span>
+      <button id="buyCaseBtn">1.5M $Fear</button>
+    </div>
+  </div>
+  <div id="panelFriends" class="panel">
+    <button id="inviteBtn">📤 Пригласить друга</button>
+    <p style="margin-top:10px; font-size:14px; color:#aaa;">Зарабатывайте бонусы за друзей!</p>
+  </div>
+  <div id="panelUpgrades" class="panel">
+    <div class="upgrade-item">
+      <span>🤖 Авто-шахтер</span>
+      <button id="autoMinerBtn">Купить (100K)</button>
+    </div>
+    <div style="margin-top:8px; font-size:14px;">Пассивный доход: <span id="passiveIncome">0</span>/час</div>
+  </div>
+</div>
+
+<script>
+  (function() {
+    // ---------- КОНФИГУРАЦИЯ ----------
+    const ADMIN_ID = "7063549865";
+    const CASE_PRICE = 1_500_000;
+    const AUTO_MINER_PRICE = 100_000;
+    const MAX_ENERGY = 1000;
+    const ENERGY_PER_CLICK = 10;
+    const ENERGY_REGEN_PER_SEC = 1;
+
+    // Персонажи и редкость
+    const SKINS = {
+      common: { emoji: '🦡', name: 'Медоед-работяга', multiplier: 1, rarity: 'common', glow: '0 0 15px gray' },
+      rare: { emoji: '🦡✨', name: 'Барсук-бригадир', multiplier: 5, rarity: 'rare', glow: '0 0 20px #3b82f6' },
+      epic: { emoji: '🐼', name: 'Панда-шахтер', multiplier: 25, rarity: 'epic', glow: '0 0 25px #a855f7' },
+      legendary: { emoji: '🦡⚡', name: 'Золотой Медоед $Fear', multiplier: 100, rarity: 'legendary', glow: '0 0 35px #fbbf24' }
+    };
+
+    // Вероятности
+    const CASE_ODDS = [
+      { rarity: 'common', chance: 0.70 },
+      { rarity: 'rare', chance: 0.20 },
+      { rarity: 'epic', chance: 0.08 },
+      { rarity: 'legendary', chance: 0.02 }
+    ];
+
+    // ---------- СОСТОЯНИЕ ----------
+    let state = {
+      balance: 0,
+      energy: MAX_ENERGY,
+      activeSkin: 'common',   // ключ редкости
+      inventory: ['common'],  // стартовый скин
+      autoMiners: 0,
+      lastTimestamp: Date.now()
+    };
+
+    // Telegram WebApp
+    const tg = window.Telegram?.WebApp;
+    let user = null;
+    let isAdmin = false;
+
+    try {
+      if (tg) {
+        tg.ready();
+        tg.expand();
+        if (tg.initDataUnsafe && tg.initDataUnsafe.user) {
+          user = tg.initDataUnsafe.user;
+          if (String(user.id) === ADMIN_ID) isAdmin = true;
+        }
+      }
+    } catch (e) {}
+
+    // ---------- DOM элементы ----------
+    const balanceEl = document.getElementById('balanceDisplay');
+    const energyFill = document.getElementById('energyFill');
+    const energyText = document.getElementById('energyText');
+    const activeSkinDisplay = document.getElementById('activeSkinDisplay');
+    const rockArea = document.getElementById('rockClickArea');
+    const particleContainer = document.getElementById('particleContainer');
+    const adminTrigger = document.getElementById('adminTrigger');
+    const buyCaseBtn = document.getElementById('buyCaseBtn');
+    const inviteBtn = document.getElementById('inviteBtn');
+    const autoMinerBtn = document.getElementById('autoMinerBtn');
+    const passiveIncomeEl = document.getElementById('passiveIncome');
+    const tabBtns = document.querySelectorAll('.tab-btn');
+    const panels = {
+      cases: document.getElementById('panelCases'),
+      friends: document.getElementById('panelFriends'),
+      upgrades: document.getElementById('panelUpgrades')
+    };
+
+    // ---------- УТИЛИТЫ ----------
+    function saveState() {
+      localStorage.setItem('fearless_miner_state', JSON.stringify(state));
+    }
+    function loadState() {
+      const saved = localStorage.getItem('fearless_miner_state');
+      if (saved) {
+        try {
+          const parsed = JSON.parse(saved);
+          state = { ...state, ...parsed };
+          // валидация инвентаря
+          if (!state.inventory || !Array.isArray(state.inventory) || state.inventory.length===0) {
+            state.inventory = ['common'];
+            state.activeSkin = 'common';
+          }
+          if (!SKINS[state.activeSkin]) state.activeSkin = 'common';
+        } catch (e) {}
+      }
+    }
+
+    function updateUI() {
+      balanceEl.textContent = formatNumber(state.balance);
+      const percent = Math.max(0, (state.energy / MAX_ENERGY) * 100);
+      energyFill.style.width = `${percent}%`;
+      energyText.textContent = Math.floor(state.energy);
+
+      const skin = SKINS[state.activeSkin] || SKINS.common;
+      activeSkinDisplay.textContent = skin.emoji;
+      activeSkinDisplay.style.textShadow = skin.glow;
+
+      passiveIncomeEl.textContent = formatNumber(state.autoMiners * 500);
+      if (isAdmin) adminTrigger.classList.remove('hidden');
+      else adminTrigger.classList.add('hidden');
+    }
+
+    function formatNumber(num) {
+      if (num >= 1e6) return (num/1e6).toFixed(2) + 'M';
+      if (num >= 1e3) return (num/1e3).toFixed(1) + 'K';
+      return Math.floor(num).toString();
+    }
+
+    // Генерация частиц
+    function spawnParticles(x, y) {
+      for (let i=0; i<14; i++) {
+        const particle = document.createElement('div');
+        particle.style.position = 'absolute';
+        particle.style.left = `${x}px`;
+        particle.style.top = `${y}px`;
+        particle.style.width = '8px';
+        particle.style.height = '8px';
+        particle.style.background = '#fbbf24';
+        particle.style.borderRadius = '50%';
+        particle.style.boxShadow = '0 0 10px gold';
+        particle.style.pointerEvents = 'none';
+        particle.style.zIndex = '20';
+        particle.style.transition = 'transform 0.7s ease-out, opacity 0.7s';
+        particleContainer.appendChild(particle);
+        
+        const angle = Math.random() * Math.PI * 2;
+        const distance = 40 + Math.random() * 70;
+        const dx = Math.cos(angle) * distance;
+        const dy = Math.sin(angle) * distance;
+        
+        requestAnimationFrame(() => {
+          particle.style.transform = `translate(${dx}px, ${dy}px) scale(0.2)`;
+          particle.style.opacity = '0';
+        });
+        setTimeout(() => particle.remove(), 750);
+      }
+    }
+
+    // Вибрация
+    function heavyHaptic() {
+      if (tg && tg.HapticFeedback) {
+        tg.HapticFeedback.impactOccurred('heavy');
+      }
+    }
+
+    // Клик по камню
+    function handleMining(e) {
+      if (state.energy < ENERGY_PER_CLICK) {
+        alert('Недостаточно энергии!');
+        return;
+      }
+      state.energy = Math.max(0, state.energy - ENERGY_PER_CLICK);
+      const skin = SKINS[state.activeSkin] || SKINS.common;
+      const earned = 1 * skin.multiplier;
+      state.balance += earned;
+
+      // Анимация частиц
+      const rect = rockArea.getBoundingClientRect();
+      const centerX = rect.left + rect.width/2;
+      const centerY = rect.top + rect.height/2;
+      const clickX = e.clientX || centerX;
+      const clickY = e.clientY || centerY;
+      spawnParticles(clickX - rect.left + 40, clickY - rect.top + 20);
+      
+      heavyHaptic();
+      saveState();
+      updateUI();
+    }
+
+    rockArea.addEventListener('click', handleMining);
+    rockArea.addEventListener('touchstart', (e) => {
+      e.preventDefault();
+      handleMining(e.touches[0] || e);
+    }, {passive: false});
+
+    // Регенерация энергии
+    setInterval(() => {
+      if (state.energy < MAX_ENERGY) {
+        state.energy = Math.min(MAX_ENERGY, state.energy + ENERGY_REGEN_PER_SEC);
+        saveState();
+        updateUI();
+      }
+      // пассивный доход от автошахтеров (каждую секунду капает ~0.1389 монет за 500/час)
+      if (state.autoMiners > 0) {
+        const perSecond = (state.autoMiners * 500) / 3600;
+        state.balance += perSecond;
+        saveState();
+        updateUI();
+      }
+      state.lastTimestamp = Date.now();
+    }, 1000);
+
+    // ---------- КЕЙСЫ ----------
+    function openCase() {
+      if (state.balance < CASE_PRICE) {
+        alert('Недостаточно $Fear!');
+        return;
+      }
+      state.balance -= CASE_PRICE;
+      
+      // определение выпавшей редкости
+      const rand = Math.random();
+      let cumulative = 0;
+      let selectedRarity = 'common';
+      for (let item of CASE_ODDS) {
+        cumulative += item.chance;
+        if (rand <= cumulative) {
+          selectedRarity = item.rarity;
+          break;
+        }
+      }
+      
+      const newSkin = SKINS[selectedRarity];
+      state.inventory.push(selectedRarity);
+      state.activeSkin = selectedRarity;
+      
+      // Анимация открытия (тряска + свечение)
+      const casePanel = document.querySelector('.case-item');
+      if (casePanel) {
+        casePanel.style.transition = '0.1s';
+        casePanel.style.transform = 'rotate(3deg)';
+        setTimeout(() => { casePanel.style.transform = 'rotate(-3deg)'; }, 80);
+        setTimeout(() => { casePanel.style.transform = 'rotate(0deg)'; }, 160);
+      }
+      
+      saveState();
+      updateUI();
+      alert(`🎉 Выпал: ${newSkin.name} (x${newSkin.multiplier})`);
+      if (tg && tg.HapticFeedback) tg.HapticFeedback.notificationOccurred('success');
+    }
+    buyCaseBtn.addEventListener('click', openCase);
+
+    // ---------- ДРУЗЬЯ ----------
+    inviteBtn.addEventListener('click', () => {
+      if (tg && tg.shareLink) {
+        const shareText = "⛏️ Fearless Miner — добывай $Fear и открывай легендарных шахтеров!";
+        tg.shareLink(`https://t.me/your_bot?start=ref_${user?.id || 'guest'}`, shareText);
+      } else {
+        alert('Реферальная ссылка: t.me/your_bot?start=ref_demo');
+      }
+    });
+
+    // ---------- АПГРЕЙДЫ ----------
+    autoMinerBtn.addEventListener('click', () => {
+      if (state.balance < AUTO_MINER_PRICE) {
+        alert('Недостаточно монет!');
+        return;
+      }
+      state.balance -= AUTO_MINER_PRICE;
+      state.autoMiners++;
+      saveState();
+      updateUI();
+    });
+
+    // ---------- ПЕРЕКЛЮЧЕНИЕ ВКЛАДОК ----------
+    tabBtns.forEach(btn => {
+      btn.addEventListener('click', () => {
+        tabBtns.forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        const tab = btn.dataset.tab;
+        for (let key in panels) panels[key].classList.remove('active');
+        if (panels[tab]) panels[tab].classList.add('active');
+      });
+    });
+
+    // ---------- АДМИН-ПАНЕЛЬ ----------
+    adminTrigger.addEventListener('click', () => {
+      if (!isAdmin) return;
+      const action = prompt('Админ-панель:\n1 - Начислить 10 млн $Fear\n2 - Бесконечная энергия\n3 - Открыть все скины');
+      if (action === '1') {
+        state.balance += 10_000_000;
+        saveState(); updateUI();
+        alert('+10 млн $Fear');
+      } else if (action === '2') {
+        state.energy = MAX_ENERGY;
+        saveState(); updateUI();
+        alert('Энергия восстановлена');
+      } else if (action === '3') {
+        for (let r in SKINS) {
+          if (!state.inventory.includes(r)) state.inventory.push(r);
+        }
+        state.activeSkin = 'legendary';
+        saveState(); updateUI();
+        alert('Все скины открыты!');
+      }
+    });
+
+    // ---------- ФОН ИСКРЫ ----------
+    function createSparks() {
+      const container = document.getElementById('sparksContainer');
+      for (let i=0; i<18; i++) {
+        const spark = document.createElement('div');
+        spark.className = 'spark';
+        spark.style.left = Math.random()*100+'%';
+        spark.style.animationDelay = Math.random()*7+'s';
+        spark.style.animationDuration = 4+Math.random()*7+'s';
+        container.appendChild(spark);
+      }
+    }
+    createSparks();
+
+    // Инициализация
+    loadState();
+    updateUI();
+  })();
+</script>
+</body>
+</html>
